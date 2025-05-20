@@ -65,7 +65,9 @@ export default function BudgetBuilder({ user, items = [], onRemoveItem }) {
 
   const handleCopy = () => {
     setLoading(true);
-    const text = budgetService.formatBudget(allItems) + `\n\nTOTAL: $${budgetService.calculateTotal(allItems)}`;
+    let text = '🛒 Presupuesto\n--------------------------\n';
+    text += allItems.map(item => `${item.name} - ${item.quantity} x $${item.price} = $${item.price * item.quantity}`).join('\n');
+    text += `\n\n💰 TOTAL: $${budgetService.calculateTotal(allItems)}`;
     copyToClipboard(text);
     setCopied(true);
     setFeedback('¡Presupuesto copiado!');

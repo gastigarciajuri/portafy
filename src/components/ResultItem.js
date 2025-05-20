@@ -13,10 +13,13 @@ import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import Box from '@mui/material/Box';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { formatPrice } from '../utils/helpers';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 
 export default function ResultItem({ item, onCopy, onAddToBudget }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const handleExpandClick = () => {
     setExpanded(!expanded);
@@ -26,22 +29,24 @@ export default function ResultItem({ item, onCopy, onAddToBudget }) {
     setSelectedPlan(plan);
   };
 
-  // Copiar nombre de plan, precio final y beneficios
-  const handleCopyResumen = (e) => {
+  // Copiar promoción con formato
+  const handleCopyPromo = (e) => {
     e.stopPropagation();
-    let resumen = '';
+    let text = `🎉 Promoción: ${item.title}\n--------------------------\n${item.description || ''}`;
     if (item.plans && item.plans.length > 0) {
-      resumen += item.plans.map(plan => `${plan.name}: ${formatPrice(plan.finalPrice)}`).join('\n');
+      text += `\n\n🏷️ Planes:\n`;
+      text += item.plans.map(plan => `- ${plan.name}: $${plan.finalPrice}`).join('\n');
     }
     if (item.benefits && item.benefits.length > 0) {
-      resumen += '\n\nBeneficios:\n';
-      resumen += item.benefits.map(b => `- ${b.title}${b.description ? ': ' + b.description : ''}${b.duration ? ' (' + b.duration + ')' : ''}`).join('\n');
+      text += `\n\n✨ Beneficios:\n`;
+      text += item.benefits.map(b => `- ${b.title}${b.description ? ': ' + b.description : ''}${b.duration ? ' (' + b.duration + ')' : ''}`).join('\n');
     }
-    if (resumen) {
-      navigator.clipboard.writeText(resumen);
-    } else {
-      onCopy(item);
+    if (item.validUntil) {
+      text += `\n\n📅 Vigencia: hasta ${item.validUntil}`;
     }
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   return (
@@ -131,13 +136,21 @@ export default function ResultItem({ item, onCopy, onAddToBudget }) {
               variant="outlined"
               color="secondary"
               startIcon={<FileCopyIcon />}
-              onClick={handleCopyResumen}
+              onClick={handleCopyPromo}
             >
-              Copiar resumen
+              Copiar promoción
             </Button>
           </Stack>
         </CardContent>
       </Collapse>
+      <Snackbar
+        open={copied}
+        autoHideDuration={1200}
+        onClose={() => setCopied(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" sx={{ width: '100%' }}>¡Promoción copiada!</Alert>
+      </Snackbar>
     </Card>
   );
 } 

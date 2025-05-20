@@ -1,6 +1,6 @@
-# Asistente de Call Center
+# Portafy
 
-Aplicación web interna para asesores comerciales de call center, desarrollada con React y Firebase.
+Portafy es una aplicación web interna para asesores comerciales de call center, desarrollada con React y Firebase.
 
 ## Características
 
@@ -23,7 +23,7 @@ Aplicación web interna para asesores comerciales de call center, desarrollada c
 1. Clonar el repositorio:
 ```bash
 git clone [URL_DEL_REPOSITORIO]
-cd call-center-assistant
+cd portafy
 ```
 
 2. Instalar dependencias:

@@ -59,23 +59,24 @@ export const notesService = {
   async getUserNotes(userId, pageSize = 20, lastDoc = null, searchTerm = '', sortBy = 'createdAt') {
     if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error('No autorizado');
     try {
-      let q = query(
-        collection(db, 'notes'),
-        where('userId', '==', userId)
-      );
-
-      // Solo aplicar búsqueda si hay término de búsqueda
-      if (searchTerm) {
+      let q;
+      if (searchTerm && searchTerm.trim().length > 0) {
         const searchKeywords = this.generateSearchKeywords(searchTerm);
         q = query(
           collection(db, 'notes'),
           where('userId', '==', userId),
-          where('searchKeywords', 'array-contains-any', searchKeywords)
+          where('searchKeywords', 'array-contains-any', searchKeywords),
+          orderBy(sortBy, 'desc'),
+          limit(pageSize)
+        );
+      } else {
+        q = query(
+          collection(db, 'notes'),
+          where('userId', '==', userId),
+          orderBy(sortBy, 'desc'),
+          limit(pageSize)
         );
       }
-
-      // Agregar ordenamiento
-      q = query(q, orderBy(sortBy, 'desc'), limit(pageSize));
 
       if (lastDoc) {
         q = query(q, startAfter(lastDoc));
@@ -92,6 +93,10 @@ export const notesService = {
         lastDoc: querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : null
       };
     } catch (error) {
+      // Si es un error de Firestore por el filtro, devolver array vacío sin mostrar toast
+      if (error.code === 'not-found' || error.message?.includes('no matching index')) {
+        return { notes: [], lastDoc: null };
+      }
       throw error;
     }
   },

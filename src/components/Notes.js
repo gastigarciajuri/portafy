@@ -18,6 +18,7 @@ import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,7 +65,7 @@ export default function Notes({ user }) {
       setLastDoc(data.lastDoc);
       setHasMore(data.notes.length === 20);
     } catch (e) {
-      setSnackbar({ open: true, message: 'Error al cargar notas.', severity: 'error' });
+      // No need to set snackbar here, as per the instructions
     }
     setLoadingStates(prev => ({ ...prev, initial: false }));
   }, [user, searchTerm, sortBy]);
@@ -76,7 +77,7 @@ export default function Notes({ user }) {
   }, [user, searchTerm, sortBy, resetAndFetchNotes]);
 
   const handleSearch = useCallback((event) => {
-    setSearchTerm(event.target.value);
+    setSearchTerm(event.target.value.toLowerCase());
     setCurrentPage(0);
     setLastDoc(null);
   }, []);
@@ -169,6 +170,19 @@ export default function Notes({ user }) {
     setConfirmDelete(null);
   };
 
+  const handleCopyNote = (note) => {
+    const formatted = `📝 Nota: ${note.title}\n--------------------------\n${note.content}\n\n📅 Creada: ${formatDate(note.createdAt)}`;
+    navigator.clipboard.writeText(formatted);
+    setSnackbar({ open: true, message: '¡Nota copiada!', severity: 'success' });
+  };
+
+  const filteredNotes = searchTerm
+    ? notes.filter(note =>
+        (note.title && note.title.toLowerCase().includes(searchTerm)) ||
+        (note.content && note.content.toLowerCase().includes(searchTerm))
+      )
+    : notes;
+
   return (
     <Box sx={{ maxWidth: '100%', mx: 'auto', px: 2 }}>
       <Typography variant="h4" color="primary" gutterBottom>Notas personales</Typography>
@@ -249,175 +263,189 @@ export default function Notes({ user }) {
           <CircularProgress />
         </Box>
       ) : (
-        <Box sx={{ position: 'relative', width: '100%', maxWidth: 700, mx: 'auto', mt: 2 }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentPage}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'stretch',
-                  gap: 3,
-                  width: '100%',
-                  minHeight: 320,
-                  py: 1,
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+            width: '100%',
+            minHeight: 400,
+            position: 'relative',
+            mt: 4,
+            gap: 0,
+          }}
+        >
+          {filteredNotes
+            .slice(currentPage * NOTES_PER_PAGE, (currentPage + 1) * NOTES_PER_PAGE)
+            .map((note, idx, arr) => (
+              <motion.div
+                key={note.id}
+                style={{
+                  position: 'relative',
+                  zIndex: idx === 1 ? 2 : 1,
+                  marginLeft: idx === 0 ? 0 : -60,
+                  borderRadius: 32,
+                  overflow: 'hidden',
                 }}
+                whileHover={{ zIndex: 3, scale: 1.04, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+                transition={{ duration: 0.2 }}
               >
-                {notes
-                  .slice(currentPage * NOTES_PER_PAGE, (currentPage + 1) * NOTES_PER_PAGE)
-                  .map(note => (
-                    <motion.div
-                      key={note.id}
-                      whileHover={{ scale: 1.03 }}
-                      transition={{ duration: 0.2 }}
-                      style={{ display: 'flex', minWidth: 0, flex: 1, justifyContent: 'center' }}
+                <Card
+                  sx={{
+                    width: 320,
+                    minWidth: 320,
+                    maxWidth: 320,
+                    height: 400,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    borderRadius: 4,
+                    boxShadow: 6,
+                    bgcolor: 'background.paper',
+                    cursor: 'pointer',
+                    alignItems: 'center',
+                    transition: 'box-shadow 0.2s, transform 0.2s',
+                  }}
+                  onClick={() => setPreviewNote(note)}
+                >
+                  <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', p: 4, pb: 2 }}>
+                    <Typography variant="h6" color="secondary.main" gutterBottom sx={{ textAlign: 'center', fontWeight: 600 }}>
+                      {note.title}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', mb: 2, textAlign: 'center' }}
                     >
-                      <Card
-                        sx={{
-                          width: 210,
-                          minWidth: 210,
-                          maxWidth: 210,
-                          height: 260,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          borderRadius: 3,
-                          boxShadow: 3,
-                          bgcolor: 'background.paper',
-                          cursor: 'pointer',
-                          mx: 'auto',
-                          alignItems: 'center',
+                      {formatDate(note.createdAt)}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.primary"
+                      sx={{
+                        mb: 2,
+                        minHeight: '60px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 5,
+                        WebkitBoxOrient: 'vertical',
+                        flex: 1,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {note.content}
+                    </Typography>
+                  </CardContent>
+                  <Box sx={{ width: '100%', px: 3, pb: 3 }}>
+                    <Stack direction="row" spacing={2} sx={{ justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                      <Button
+                        variant="outlined"
+                        color="info"
+                        startIcon={<EditIcon />}
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleEdit(note);
                         }}
-                        onClick={() => setPreviewNote(note)}
+                        disabled={loadingStates.saving || loadingStates.deleting}
+                        size="medium"
+                        sx={{ minWidth: 90, fontWeight: 600 }}
                       >
-                        <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', p: 2 }}>
-                          <Typography variant="h6" color="secondary.main" gutterBottom sx={{ textAlign: 'center', fontWeight: 600 }}>
-                            {note.title}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block', mb: 1, textAlign: 'center' }}
-                          >
-                            {formatDate(note.createdAt)}
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.primary"
-                            sx={{
-                              mb: 2,
-                              minHeight: '60px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 4,
-                              WebkitBoxOrient: 'vertical',
-                              flex: 1,
-                              textAlign: 'center',
-                            }}
-                          >
-                            {note.content}
-                          </Typography>
-                          <Stack direction="row" spacing={1} sx={{ mt: 1, justifyContent: 'center' }}>
-                            <Button
-                              variant="outlined"
-                              color="info"
-                              startIcon={<EditIcon />}
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleEdit(note);
-                              }}
-                              disabled={loadingStates.saving || loadingStates.deleting}
-                              size="small"
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              startIcon={loadingStates.deleting && confirmDelete === note.id ? (
-                                <CircularProgress size={20} color="inherit" />
-                              ) : (
-                                <DeleteIcon />
-                              )}
-                              onClick={e => {
-                                e.stopPropagation();
-                                setConfirmDelete(note.id);
-                              }}
-                              disabled={loadingStates.saving || loadingStates.deleting}
-                              size="small"
-                            >
-                              Eliminar
-                            </Button>
-                          </Stack>
-                          {confirmDelete === note.id && (
-                            <Stack direction="row" spacing={1} sx={{ mt: 1, justifyContent: 'center' }}>
-                              <Button
-                                color="error"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  handleDelete(note.id);
-                                }}
-                                size="small"
-                              >
-                                Sí
-                              </Button>
-                              <Button
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setConfirmDelete(null);
-                                }}
-                                size="small"
-                              >
-                                No
-                              </Button>
-                            </Stack>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-              </Box>
-            </motion.div>
-          </AnimatePresence>
-
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            mt: 2,
-            gap: 2
-          }}>
-            <IconButton 
-              onClick={handlePreviousPage}
-              disabled={currentPage === 0}
-              color="primary"
-            >
-              <KeyboardArrowLeftIcon />
-            </IconButton>
-            
-            <Typography variant="body2" color="text.secondary">
-              Página {currentPage + 1} de {Math.ceil(notes.length / NOTES_PER_PAGE)}
-            </Typography>
-
-            <IconButton 
-              onClick={handleNextPage}
-              disabled={!hasMore && (currentPage + 1) * NOTES_PER_PAGE >= notes.length}
-              color="primary"
-            >
-              {loadingStates.loadingMore ? 
-                <CircularProgress size={24} /> : 
-                <KeyboardArrowRightIcon />
-              }
-            </IconButton>
-          </Box>
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<ContentCopyIcon />}
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleCopyNote(note);
+                        }}
+                        size="medium"
+                        sx={{ minWidth: 90, fontWeight: 600 }}
+                      >
+                        Copiar
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={loadingStates.deleting && confirmDelete === note.id ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          <DeleteIcon />
+                        )}
+                        onClick={e => {
+                          e.stopPropagation();
+                          setConfirmDelete(note.id);
+                        }}
+                        disabled={loadingStates.saving || loadingStates.deleting}
+                        size="medium"
+                        sx={{ minWidth: 90, fontWeight: 600 }}
+                      >
+                        Eliminar
+                      </Button>
+                    </Stack>
+                    {confirmDelete === note.id && (
+                      <Stack direction="row" spacing={2} sx={{ mt: 2, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                        <Button
+                          color="error"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDelete(note.id);
+                          }}
+                          size="medium"
+                          sx={{ minWidth: 80, fontWeight: 600 }}
+                        >
+                          Sí
+                        </Button>
+                        <Button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setConfirmDelete(null);
+                          }}
+                          size="medium"
+                          sx={{ minWidth: 80, fontWeight: 600 }}
+                        >
+                          No
+                        </Button>
+                      </Stack>
+                    )}
+                  </Box>
+                </Card>
+              </motion.div>
+            ))}
         </Box>
       )}
+
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        mt: 2,
+        gap: 2
+      }}>
+        <IconButton 
+          onClick={handlePreviousPage}
+          disabled={currentPage === 0}
+          color="primary"
+        >
+          <KeyboardArrowLeftIcon />
+        </IconButton>
+        
+        <Typography variant="body2" color="text.secondary">
+          Página {currentPage + 1} de {Math.ceil(filteredNotes.length / NOTES_PER_PAGE)}
+        </Typography>
+
+        <IconButton 
+          onClick={handleNextPage}
+          disabled={!hasMore && (currentPage + 1) * NOTES_PER_PAGE >= filteredNotes.length}
+          color="primary"
+        >
+          {loadingStates.loadingMore ? 
+            <CircularProgress size={24} /> : 
+            <KeyboardArrowRightIcon />
+          }
+        </IconButton>
+      </Box>
 
       <Dialog
         open={Boolean(previewNote)}
@@ -455,15 +483,6 @@ export default function Notes({ user }) {
           </>
         )}
       </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={2500}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
-      </Snackbar>
     </Box>
   );
 } 
